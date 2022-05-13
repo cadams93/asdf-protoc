@@ -21,11 +21,21 @@ get_platform() {
 }
 
 get_arch() {
+  local version=$1
   local os=$(uname)
   local arch=$(uname -m)
+
   # On ARM Macs, uname -m returns "arm64", but in protoc releases this architecture is called "aarch_64"
   if [[ "${os}" == "Darwin" && "${arch}" == "arm64" ]]; then
-    echo "aarch_64"
+    local major="$(echo "$version" | cut -d . -f 1)"
+    local minor="$(echo "$version" | cut -d . -f 2,2)"
+
+    # Version 3.20 was the first to be published with an osx "aarch_64" architecture.
+    if [[ "${major}" < "3" || ("${major}" == "3" && "${minor}" < "20") ]]; then 
+      echo "x86_64"
+    else 
+      echo "aarch_64"
+    fi
   else
     echo "${arch}"
   fi
@@ -36,11 +46,10 @@ install_protoc() {
   local version=$2
   local install_path=$3
 
-
   mkdir -p "${install_path}"
 
   local base_url="https://github.com/protocolbuffers/protobuf/releases/download"
-  local url="${base_url}/v${version}/protoc-${version}-$(get_platform)-$(get_arch).zip"
+  local url="${base_url}/v${version}/protoc-${version}-$(get_platform)-$(get_arch $version).zip"
   local download_path="${TMP_DIR}/protoc.zip"
 
   echo "Downloading ${url}"
